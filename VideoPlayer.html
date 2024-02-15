@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Player</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    #sidebar {
+        width: 300px;
+        padding: 20px;
+        background-color: #f2f2f2;
+    }
+    #videoPlayer {
+        width: 560px;
+        height: 315px;
+    }
+    #savedLinksContainer {
+        max-height: 400px; /* Adjust the maximum height as needed */
+        overflow-y: auto;
+    }
+    .saved-link {
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+    .delete-link {
+        color: red;
+        margin-left: 5px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h2>Saved Links</h2>
+    <button onclick="clearSavedLinks()">Clear List</button>
+    <button onclick="shuffleAndPlay()">Shuffle</button>
+    <div id="savedLinksContainer">
+        <div id="savedLinks"></div>
+    </div>
+</div>
+
+<div id="mainContent">
+    <h1>YouTube Player</h1>
+    <p>Enter a search query or a YouTube link below:</p>
+    <input type="text" id="searchQuery" placeholder="Enter search query">
+    <button onclick="searchVideo()">Search</button>
+    <br><br>
+    <input type="text" id="youtubeLink" placeholder="Enter YouTube link">
+    <button onclick="playVideo()">Go</button>
+    <br><br>
+    <div id="player"></div>
+</div>
+
+<script>
+  window.onload = function() {
+    loadSavedLinks();
+  };
+
+  function loadSavedLinks() {
+    var savedLinks = JSON.parse(localStorage.getItem("savedLinks")) || [];
+    var savedLinksDiv = document.getElementById("savedLinks");
+    savedLinksDiv.innerHTML = '';
+    savedLinks.forEach(function(link) {
+      var linkDiv = document.createElement("div");
+      linkDiv.classList.add("saved-link");
+      linkDiv.textContent = link.title; // Display the title instead of the link
+      linkDiv.onclick = function() {
+        document.getElementById("youtubeLink").value = link.url;
+        playVideo();
+      };
+      var deleteButton = document.createElement("span");
+      deleteButton.classList.add("delete-link");
+      deleteButton.textContent = "❌";
+      deleteButton.onclick = function(event) {
+        event.stopPropagation(); // Prevent the saved link from being clicked
+        deleteLink(link);
+      };
+      linkDiv.appendChild(deleteButton);
+      savedLinksDiv.appendChild(linkDiv);
+    });
+  }
+
+  function saveLink(videoId, title) {
+    var savedLinks = JSON.parse(localStorage.getItem("savedLinks")) || [];
+    var link = { url: "https://www.youtube.com/watch?v=" + videoId, title: title };
+    if (!savedLinks.some(item => item.url === link.url)) {
+      savedLinks.push(link);
+      localStorage.setItem("savedLinks", JSON.stringify(savedLinks));
+      loadSavedLinks();
+    }
+  }
+
+  function deleteLink(link) {
+    var savedLinks = JSON.parse(localStorage.getItem("savedLinks")) || [];
+    var index = savedLinks.findIndex(item => item.url === link.url);
+    if (index !== -1) {
+      savedLinks.splice(index, 1);
+      localStorage.setItem("savedLinks", JSON.stringify(savedLinks));
+      loadSavedLinks();
+    }
+  }
+
+  function clearSavedLinks() {
+    localStorage.removeItem("savedLinks");
+    loadSavedLinks();
+  }
+
+  function shuffleAndPlay() {
+    var savedLinks = JSON.parse(localStorage.getItem("savedLinks")) || [];
+    if (savedLinks.length > 0) {
+      var randomIndex = Math.floor(Math.random() * savedLinks.length);
+      var randomLink = savedLinks[randomIndex];
+      document.getElementById("youtubeLink").value = randomLink.url;
+      playVideo();
+    } else {
+      alert("There are no saved links to shuffle.");
+    }
+  }
+
+  function searchVideo() {
+    var searchQuery = document.getElementById("searchQuery").value;
+    var apiKey = 'AIzaSyDv2iDbhYS_c7giiJnkjQ5aeGg9QPA6rMQ'; // Replace with your YouTube API key
+    var url = 'https://www.googleapis.com/youtube/v3/search?key=' + apiKey + '&part=snippet&type=video&q=' + searchQuery;
+
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.items.length === 0) {
+        showError("Video not found. Please try another search query.");
+        return;
+      }
+      var videoId = data.items[0].id.videoId;
+      var title = data.items[0].snippet.title;
+      var playerDiv = document.getElementById("player");
+      playerDiv.innerHTML = '<iframe id="videoPlayer" width="560" height="315" src="https://www.youtube.com/embed/' + videoId + '" frameborder="0" allowfullscreen></iframe>';
+      
+      // Add a button to save the searched video to playlist
+      var saveButton = document.createElement("button");
+      saveButton.textContent = "Save to Playlist";
+      saveButton.onclick = function() {
+        saveLink(videoId, title);
+      };
+      playerDiv.appendChild(saveButton);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showError("Error fetching video. Please try again later.");
+    });
+  }
+
+  function playVideo() {
+    var youtubeLink = document.getElementById("youtubeLink").value;
+    var videoId = extractVideoId(youtubeLink);
+    if(videoId !== null) {
+      var playerDiv = document.getElementById("player");
+      playerDiv.innerHTML = '<iframe id="videoPlayer" width="560" height="315" src="https://www.youtube.com/embed/' + videoId + '" frameborder="0" allowfullscreen></iframe>';
+    } else {
+      alert("Invalid YouTube link. Please enter a valid link.");
+    }
+  }
+
+  function extractVideoId(link) {
+    var regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    var match = link.match(regex);
+    return match ? match[1] : null;
+  }
+
+  function showError(message) {
+    var playerDiv = document.getElementById("player");
+    playerDiv.innerHTML = '<p style="color: red;">' + message + '</p>';
+  }
+</script>
+
+</body>
+</html>

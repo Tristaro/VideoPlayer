@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Player</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="sidebar">
+    <h2>Saved Links</h2>
+    <button onclick="clearSavedLinks()">Clear List</button>
+    <button onclick="shuffleAndPlay()">Shuffle</button>
+    <div id="savedLinksContainer">
+        <div id="savedLinks"></div>
+    </div>
+</div>
+
+<div id="mainContent">
+    <h1>YouTube Player</h1>
+    <p>Enter a search query below:</p>
+    <input type="text" id="searchQuery" placeholder="Search">
+    <button onclick="searchVideo()">Search</button>
+    <br><br>
+    <div id="player"></div>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
